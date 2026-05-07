@@ -1,0 +1,94 @@
+name: deploy-prod
+# xhs-clone-api · prod FC v3 Custom Container · ACR (push main → api.xhs.agentaily.com)
+#
+# 流程: docker build → push ACR → fc PUT custom-container
+# 凭证: ACR_USERNAME / ACR_PASSWORD / ALIYUN_AK / ALIYUN_SK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "alembic/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/deploy-prod.yml"
+  workflow_dispatch:
+
+env:
+  REGION: cn-hangzhou
+  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  REGISTRY_VPC: registry-vpc.cn-hangzhou.aliyuncs.com
+  NAMESPACE: agentaily
+  IMAGE_NAME: xhs-clone-api
+  FC_FUNCTION: xhs-clone-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build + Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Setup aliyun CLI
+        run: |
+          curl -sLo /tmp/aliyun.tgz https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+          tar -xzf /tmp/aliyun.tgz -C /tmp && sudo mv /tmp/aliyun /usr/local/bin/
+          aliyun configure set --profile gha --mode AK \
+            --region $REGION \
+            --access-key-id "${{ secrets.ALIYUN_AK }}" \
+            --access-key-secret "${{ secrets.ALIYUN_SK }}"
+
+      - name: Update FC v3 function (custom-container · ACR image)
+        run: |
+          IMAGE_VPC="${{ env.REGISTRY_VPC }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          BODY=$(cat <<JSON
+          {
+            "functionName": "${FC_FUNCTION}",
+            "description": "${FC_FUNCTION} · prod · ACR (来源 fc-agent-deploy skill)",
+            "runtime": "custom-container",
+            "handler": "not-used",
+            "timeout": 60,
+            "memorySize": 512,
+            "instanceConcurrency": 10,
+            "customContainerConfig": {
+              "image": "$IMAGE_VPC",
+              "port": 8000,
+              "healthCheckConfig": {"httpGetUrl": "/health", "initialDelaySeconds": 5}
+            },
+            "environmentVariables": {
+              "ENV": "prod"
+            }
+          }
+          JSON
+          )
+          if ! aliyun --profile gha fc PUT "/2023-03-30/functions/${FC_FUNCTION}" \
+              --header "Content-Type=application/json;" --body "$BODY" 2>&1 | tee /tmp/fc.log | tail -10; then true; fi
+          if grep -q "FunctionNotFound\|can not find" /tmp/fc.log 2>/dev/null; then
+            aliyun --profile gha fc POST /2023-03-30/functions \
+              --header "Content-Type=application/json;" --body "$BODY" 2>&1 | tail -10
+          fi
+
+      - name: Smoke
+        run: |
+          sleep 10
+          curl -sSL "https://api.xhs.agentaily.com/health?cb=$RANDOM" -w "\nHTTP %{http_code}\n" || true
