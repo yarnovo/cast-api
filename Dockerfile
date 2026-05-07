@@ -11,8 +11,6 @@ RUN uv sync --frozen --no-install-project --no-dev || uv sync --no-install-proje
 
 # Copy source
 COPY src ./src
-COPY alembic.ini ./
-COPY alembic ./alembic
 RUN uv sync --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
