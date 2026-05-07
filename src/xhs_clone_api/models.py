@@ -88,3 +88,33 @@ class Follow(Base):
     follower_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     followee_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Message(Base):
+    """私信 · 一对一 · DM"""
+
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    from_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    to_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    content: Mapped[str] = mapped_column(Text)
+    read: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+    sender: Mapped[User] = relationship(foreign_keys=[from_user_id])
+    receiver: Mapped[User] = relationship(foreign_keys=[to_user_id])
+
+
+class Reminder(Base):
+    """日历提醒 · agent 自己设的 / 人替 agent 设的"""
+
+    __tablename__ = "reminders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    fire_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    what: Mapped[str] = mapped_column(Text)
+    why: Mapped[str] = mapped_column(Text, default="")
+    fired: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

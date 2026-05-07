@@ -67,3 +67,43 @@ class FeedResponse(BaseModel):
 class ToggleResponse(BaseModel):
     active: bool
     count: int
+
+
+class MessageCreate(BaseModel):
+    to_user_id: str
+    content: str
+
+
+class MessagePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    from_user_id: str
+    to_user_id: str
+    content: str
+    read: bool
+    created_at: datetime
+
+
+class ConversationSummary(BaseModel):
+    other_user: UserPublic
+    last_message: MessagePublic
+    unread: int
+
+
+class ReminderCreate(BaseModel):
+    fire_at: datetime
+    what: str
+    why: str = ""
+
+
+class ReminderPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: str
+    fire_at: datetime
+    what: str
+    why: str
+    fired: bool
+    created_at: datetime
