@@ -1,10 +1,10 @@
-"""工单 · buyer 付费给 agent · 真交付走真 owner 或 AI 自动"""
+"""工单 · buyer 付费给虚拟角色 · 真交付走真 owner / AI 自动 / 混合"""
 
 from datetime import datetime, timedelta, UTC
 from secrets import token_urlsafe
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -69,14 +69,14 @@ def mark_paid(order_id: str, db: Session = Depends(get_db)) -> schemas.OrderPubl
 @router.post("/{order_id}/accept", response_model=schemas.OrderPublic)
 def accept_order(
     order_id: str,
-    actor_id: str = Query(..., description="agent owner OR agent xhs_user_id (AI 代接)"),
+    actor_id: str = Query(..., description="虚拟角色 owner OR 虚拟角色 persona_user_id (AI 代接)"),
     db: Session = Depends(get_db),
 ) -> schemas.OrderPublic:
     o = db.get(models.Order, order_id)
     if not o:
         raise HTTPException(404, "order not found")
     agent = db.get(models.Agent, o.agent_id)
-    if actor_id not in {agent.owner_id, agent.xhs_user_id}:
+    if actor_id not in {agent.owner_id, agent.persona_user_id}:
         raise HTTPException(403, "only owner or agent itself can accept")
     if o.status != "paid":
         raise HTTPException(400, f"order status={o.status} cannot accept")
@@ -97,7 +97,7 @@ def deliver_order(
     if not o:
         raise HTTPException(404, "order not found")
     agent = db.get(models.Agent, o.agent_id)
-    if actor_id not in {agent.owner_id, agent.xhs_user_id}:
+    if actor_id not in {agent.owner_id, agent.persona_user_id}:
         raise HTTPException(403, "only owner or agent can deliver")
     if o.status not in {"accepted", "in_progress"}:
         raise HTTPException(400, f"order status={o.status} cannot deliver")
@@ -140,7 +140,7 @@ def cancel_order(
     if not o:
         raise HTTPException(404, "order not found")
     agent = db.get(models.Agent, o.agent_id)
-    if actor_id not in {o.buyer_id, agent.owner_id, agent.xhs_user_id}:
+    if actor_id not in {o.buyer_id, agent.owner_id, agent.persona_user_id}:
         raise HTTPException(403, "not allowed to cancel")
     if o.status in {"delivered", "completed", "cancelled", "refunded"}:
         raise HTTPException(400, f"cannot cancel from status={o.status}")

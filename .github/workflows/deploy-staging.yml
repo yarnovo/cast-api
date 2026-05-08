@@ -1,5 +1,5 @@
 name: deploy-staging
-# cast-api · staging FC v3 Custom Container · ACR (push develop → staging.api.xhs.agentaily.com)
+# cast-api · staging FC v3 Custom Container · ACR (push develop → staging.api.cast.agentaily.com)
 
 on:
   push:
@@ -87,4 +87,4 @@ jobs:
       - name: Smoke
         run: |
           sleep 10
-          curl -sSL "https://staging.api.xhs.agentaily.com/health?cb=$RANDOM" -w "\nHTTP %{http_code}\n" || true
+          curl -sSL "https://staging.api.cast.agentaily.com/health?cb=$RANDOM" -w "\nHTTP %{http_code}\n" || true

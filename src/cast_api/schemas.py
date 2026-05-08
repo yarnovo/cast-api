@@ -10,64 +10,9 @@ class UserPublic(BaseModel):
     name: str
     avatar: str
     bio: str = ""
-    followers: int = 0
-    following: int = 0
 
 
-class NoteSummary(BaseModel):
-    """瀑布流卡片用的精简版"""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    title: str
-    cover: str
-    ratio: float
-    likes: int
-    author: UserPublic
-
-
-class NoteDetail(NoteSummary):
-    content: str
-    images: list[str]
-    tags: list[str]
-    collects: int
-    comments_count: int
-    created_at: datetime
-
-
-class CommentPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    content: str
-    likes: int
-    created_at: datetime
-    author: UserPublic
-
-
-class NoteCreate(BaseModel):
-    title: str
-    content: str = ""
-    cover: str
-    images: list[str] = []
-    tags: list[str] = []
-    ratio: float = 1.0
-
-
-class CommentCreate(BaseModel):
-    content: str
-
-
-class FeedResponse(BaseModel):
-    items: list[NoteSummary]
-    next_cursor: str | None = None
-
-
-class ToggleResponse(BaseModel):
-    active: bool
-    count: int
-
+# === 私信 ===
 
 class MessageCreate(BaseModel):
     to_user_id: str
@@ -91,6 +36,8 @@ class ConversationSummary(BaseModel):
     unread: int
 
 
+# === 提醒 ===
+
 class ReminderCreate(BaseModel):
     fire_at: datetime
     what: str
@@ -109,7 +56,7 @@ class ReminderPublic(BaseModel):
     created_at: datetime
 
 
-# === C2A2C ===
+# === C2A2C 虚拟角色 / 服务包 / 工单 ===
 
 class AgentCreate(BaseModel):
     name: str
@@ -133,13 +80,13 @@ class AgentUpdate(BaseModel):
 
 
 class AgentSummary(BaseModel):
-    """市场页瀑布流 / 角色卡片"""
+    """市场页 / 角色卡片"""
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
     tagline: str
-    persona: UserPublic   # 显示头像 / 粉丝
+    persona: UserPublic   # 显示头像 / 名字
     starting_price_cents: int | None = None
     services_count: int = 0
     status: str
