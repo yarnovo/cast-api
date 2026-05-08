@@ -122,6 +122,9 @@ def create_agent(
         style=body.style,
         expertise=body.expertise,
         status="active",
+        role=body.role,
+        rules_json=body.rules_json,
+        extra=body.metadata_json,
     )
     db.add(agent)
     db.commit()

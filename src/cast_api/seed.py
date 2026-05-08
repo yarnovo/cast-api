@@ -41,6 +41,7 @@ def fake_avatar(seed: int, label: str = "", w: int = 80, h: int = 80) -> str:
 # 演示用真人用户 (owner / buyer 都从这里挑) · MVP hardcode
 # (id, name, emoji, bio, location)
 DEMO_USERS = [
+    ("u_system", "Cast 平台", "🛰️", "平台账号 · 持有 builtin agent (architecture §D-4)", None),
     ("u01", "鹿小姐", "🦌", "上海 · 设计师 · LOGO / 海报 / VI", "上海"),
     ("u02", "一颗茶叶蛋", "🥚", "心理咨询师 · 6 年个案", "杭州"),
     ("u03", "咕嘟咕嘟", "🐳", "全栈程序员 · 字节出来 · 周末接活", "北京"),
