@@ -59,6 +59,11 @@ class Agent(Base):
     """C2A2C 虚拟角色 · 真人 owner 创建 · 真人的专业服务代言人
 
     persona_user_id: 虚拟角色在平台上也是一个 user (有 avatar / 名字) · 用这个 id 发私信 / 发布服务。
+
+    harness 字段 (cast-agents architecture.md §2.1):
+    - role: 'meta' (有 create_agent 权限) | 'normal'
+    - rules_json: 结构化运营规则 (max_posts_per_day / min_reply_lag_minutes 等)
+    - extra (列名 metadata_json): 平台特定 (cast: location 关联 / 服务包关联 · 未来 B 站 fake: 视频分类)
     """
 
     __tablename__ = "agents"
@@ -74,6 +79,10 @@ class Agent(Base):
     style: Mapped[str] = mapped_column(Text, default="")
     expertise: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(16), default="active")  # active / paused / draft
+    role: Mapped[str] = mapped_column(String(16), default="normal", index=True)  # meta | normal
+    rules_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON · 结构化运营规则
+    # SQLAlchemy 保留 `metadata` · 列名 metadata_json · python attr 用 extra 避开
+    extra: Mapped[str | None] = mapped_column("metadata_json", Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -159,3 +168,70 @@ class Follow(Base):
     follower_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
     followee_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# === agent harness 新表 (cast-agents architecture.md §2) ===
+
+
+class AgentMemory(Base):
+    """长记忆 log · agent 自己写 (architecture.md §2.3)
+
+    每条一行 · append-only · 时间倒序消费。embedding 预留向量 · MVP 留空。
+    """
+
+    __tablename__ = "agent_memories"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(32), index=True)  # event | learning | relationship | preference | ...
+    content: Mapped[str] = mapped_column(Text)  # markdown · 自由格式
+    embedding: Mapped[bytes | None] = mapped_column(nullable=True)  # 预留 · MVP 留空
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+class Tool(Base):
+    """平台工具注册中心 (architecture.md §2.4)
+
+    平台级 tools registry · agent 通过 agent_tools 关联表订阅子集。
+    runtime 在 tick 时 · 按 agent 当前的 tools 列表注入到 LLM 的 function-calling 参数。
+    """
+
+    __tablename__ = "tools"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # 'cast.post' / 'cast.send_dm' / ...
+    name: Mapped[str] = mapped_column(String(64))
+    description: Mapped[str] = mapped_column(Text, default="")
+    params_schema_json: Mapped[str] = mapped_column(Text, default="{}")  # JSON Schema
+    returns_schema_json: Mapped[str] = mapped_column(Text, default="{}")  # JSON Schema
+    platform: Mapped[str] = mapped_column(String(32), index=True)  # cast | bilibili-fake | global
+    scope: Mapped[str] = mapped_column(String(16), default="normal")  # normal | meta-only | admin
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AgentTool(Base):
+    """agent ↔ tool 关联表 · 谁能调啥 (architecture.md §2.4)"""
+
+    __tablename__ = "agent_tools"
+
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), primary_key=True)
+    tool_id: Mapped[str] = mapped_column(ForeignKey("tools.id"), primary_key=True)
+    granted_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AgentChangeLog(Base):
+    """agent 自演化 append-only log (D-5 决策 · architecture.md §4)
+
+    每次 update_self 写一条 · 当前值是最新一条 · 可重建任意时点。
+    比单次回写 DB 安全 (能回看 agent 怎么演化的) · 比 git 化工程简单。
+    """
+
+    __tablename__ = "agent_change_log"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), index=True)
+    field: Mapped[str] = mapped_column(String(32))  # soul | playbook | style | rules_json | metadata_json
+    old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    changed_by: Mapped[str] = mapped_column(String(16), default="self")  # self | meta | owner | system
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
