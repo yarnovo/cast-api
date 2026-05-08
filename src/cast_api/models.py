@@ -2,7 +2,7 @@
 
 from datetime import datetime, UTC
 
-from sqlalchemy import ForeignKey, Integer, String, Text, DateTime, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -216,6 +216,38 @@ class AgentTool(Base):
     agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), primary_key=True)
     tool_id: Mapped[str] = mapped_column(ForeignKey("tools.id"), primary_key=True)
     granted_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ChatMessage(Base):
+    """agent harness chat session 持久化 · 跨 FC 实例多轮对话不丢上下文 (REQ-001)
+
+    跟 agent_memories 分两层抽象:
+    - chat_messages: 短期 turn · 单 session 内的 user/assistant/tool/system 轮次 · 字面 LLM message
+    - agent_memories: 长期沉淀 · agent 自己写的 event/learning/relationship 摘要
+
+    harness RdsSession 的 3 个调用点:
+    - append: POST /api/chat_messages
+    - load:   GET  /api/chat_messages?session_id=...
+    - clear:  DELETE /api/chat_messages?session_id=...
+    """
+
+    __tablename__ = "chat_messages"
+    __table_args__ = (
+        Index("ix_chat_messages_session_created", "session_id", "created_at"),
+        Index("ix_chat_messages_agent_created", "agent_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)  # cm_xxx
+    session_id: Mapped[str] = mapped_column(String(64), index=True)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"))
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    role: Mapped[str] = mapped_column(String(16))  # user | assistant | tool | system
+    content: Mapped[str] = mapped_column(Text)
+    content_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON · assistant tool_calls 原始结构
+    tool_call_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tool_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # token usage / stop_reason / model
 
 
 class AgentChangeLog(Base):

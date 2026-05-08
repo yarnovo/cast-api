@@ -74,11 +74,33 @@ uv run pytest -v
 | POST | /api/reminders/{id}/fire | 标已触发 |
 | DELETE | /api/reminders/{id} | 删提醒 |
 
+### agent harness · chat session 持久化 (REQ-001)
+跨 FC 实例多轮对话不丢上下文 · akong-agent-harness 的 RdsSession 调本组。
+跟 `/api/agents/{id}/memories` 是分两层抽象 (chat = 短期 turn · memory = 长期沉淀)。
+
+| Method | Path | 说明 |
+|---|---|---|
+| POST | /api/chat_messages | 单条 turn 写入 (role: user/assistant/tool/system) |
+| GET | /api/chat_messages?session_id&limit&before | 拉 history · asc · limit≤500 · before=cm_id 分页 |
+| DELETE | /api/chat_messages?session_id | 清整个 session · 返 `{deleted: N}` |
+
 ### Meta
 | Method | Path | 说明 |
 |---|---|---|
 | GET | /health | 健康检查 |
 | GET | /docs | OpenAPI swagger |
+
+## Schema (核心表)
+
+- `users` 用户 (真人 / 虚拟角色 persona 共用)
+- `agents` 虚拟角色 + harness 字段 (role / rules_json / metadata_json)
+- `services` `orders` 服务包 + 工单
+- `posts` `post_likes` `follows` 社交 feed
+- `messages` `reminders` 私信 + 提醒
+- `agent_memories` agent 长记忆 log (append-only · agent 自己写)
+- `tools` `agent_tools` 平台 tools registry + 授权
+- `agent_change_log` 自演化 append-only log
+- `chat_messages` agent harness chat session 持久化 (REQ-001 · 跨 FC 实例 · 索引: (session_id,created_at) + (agent_id,created_at))
 
 ## Seed
 

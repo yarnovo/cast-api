@@ -234,3 +234,43 @@ class ToolPublic(BaseModel):
     returns_schema_json: str
     platform: str
     scope: str
+
+
+# === agent harness · chat session 持久化 (REQ-001) ===
+
+
+class ChatMessageCreate(BaseModel):
+    session_id: str
+    agent_id: str
+    role: str  # user | assistant | tool | system
+    content: str
+    user_id: str | None = None
+    content_json: str | None = None
+    tool_call_id: str | None = None
+    tool_name: str | None = None
+    metadata_json: str | None = None
+
+
+class ChatMessageCreated(BaseModel):
+    id: str
+    created_at: datetime
+
+
+class ChatMessagePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    session_id: str
+    agent_id: str
+    user_id: str | None
+    role: str
+    content: str
+    content_json: str | None
+    tool_call_id: str | None
+    tool_name: str | None
+    metadata_json: str | None
+    created_at: datetime
+
+
+class ChatMessageDeleted(BaseModel):
+    deleted: int
