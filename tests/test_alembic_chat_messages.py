@@ -53,7 +53,8 @@ def test_alembic_downgrade_drops_chat_messages(tmp_path):
     db_url = f"sqlite:///{db_path}"
 
     _run(["upgrade", "head"], db_url)
-    _run(["downgrade", "-1"], db_url)
+    # downgrade 到 chat_messages 之前一版 · 防受后续 migration 链影响
+    _run(["downgrade", "a77f4d6b0784"], db_url)
 
     eng = create_engine(db_url)
     insp = inspect(eng)
@@ -69,7 +70,7 @@ def test_alembic_upgrade_after_downgrade_restores(tmp_path):
     db_url = f"sqlite:///{db_path}"
 
     _run(["upgrade", "head"], db_url)
-    _run(["downgrade", "-1"], db_url)
+    _run(["downgrade", "a77f4d6b0784"], db_url)
     _run(["upgrade", "head"], db_url)
 
     eng = create_engine(db_url)

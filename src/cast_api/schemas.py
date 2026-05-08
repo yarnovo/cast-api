@@ -274,3 +274,147 @@ class ChatMessagePublic(BaseModel):
 
 class ChatMessageDeleted(BaseModel):
     deleted: int
+
+
+# === Hermes (老板 5-9 拍 · akong-hermes 仓抽象) ===
+
+
+class SkillRefBody(BaseModel):
+    """SkillRef HTTP body · 写 hermes 时声明 skill 引用。
+
+    kind=static: static_ref 必填 (e.g. 'cast-skills::publish-post')
+    kind=dynamic: skill_id 必填 (e.g. 'sk_xxx')
+    """
+    kind: str  # 'static' | 'dynamic'
+    static_ref: str | None = None
+    skill_id: str | None = None
+    config: dict = {}
+
+
+class ToolRefBody(BaseModel):
+    """ToolRef HTTP body"""
+    kind: str  # 'static' | 'dynamic'
+    static_ref: str | None = None
+    tool_id: str | None = None
+    config: dict = {}
+
+
+class HermesCreate(BaseModel):
+    id: str | None = None  # 不传 → 生成 hm_xxx · 传 'meta-hermes' 等显式 id 给静态同步用
+    agent_id: str | None = None
+    name: str
+    soul: str = ""
+    playbook: str = ""
+    style: str = ""
+    static_ref: str | None = None
+    owner_user_id: str | None = None
+    extra: dict | None = None
+    skills: list[SkillRefBody] = []
+    tools: list[ToolRefBody] = []
+
+
+class HermesUpdate(BaseModel):
+    name: str | None = None
+    soul: str | None = None
+    playbook: str | None = None
+    style: str | None = None
+    extra: dict | None = None
+    skills: list[SkillRefBody] | None = None
+    tools: list[ToolRefBody] | None = None
+
+
+class SkillRefPublic(BaseModel):
+    """单个 SkillRef · resolver 友好 (kind / id / static_ref / config)"""
+    id: str | None = None      # dynamic skill row id (sk_xxx)
+    source: str                # 'static' | 'dynamic'
+    static_ref: str | None = None
+    config: dict = {}
+
+
+class ToolRefPublic(BaseModel):
+    id: str | None = None
+    source: str
+    static_ref: str | None = None
+    config: dict = {}
+
+
+class HermesPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    agent_id: str | None
+    name: str
+    soul: str
+    playbook: str
+    style: str
+    static_ref: str | None
+    owner_user_id: str | None
+    extra: dict
+    skills: list[SkillRefPublic]
+    tools: list[ToolRefPublic]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AkongSkillCreate(BaseModel):
+    id: str | None = None
+    name: str
+    sop_markdown: str = ""
+    source: str = "static"  # 'static' | 'dynamic'
+    static_ref: str | None = None
+    code_python: str | None = None
+    owner_user_id: str | None = None
+
+
+class AkongSkillPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    sop_markdown: str
+    source: str
+    static_ref: str | None
+    code_python: str | None
+    owner_user_id: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AkongToolCreate(BaseModel):
+    id: str | None = None
+    name: str
+    kind: str = "builtin"  # 'builtin' | 'webhook' | 'http_api' | 'dynamic_python'
+    spec_json: str | dict = "{}"
+    static_ref: str | None = None
+    code_python: str | None = None
+    webhook_url: str | None = None
+    source: str = "static"
+    owner_user_id: str | None = None
+
+
+class AkongToolPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    kind: str
+    spec_json: str
+    static_ref: str | None
+    code_python: str | None
+    webhook_url: str | None
+    source: str
+    owner_user_id: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AgentSkillLink(BaseModel):
+    skill_id: str
+    source: str = "static"
+    config: dict | None = None
+
+
+class AgentToolLink(BaseModel):
+    tool_id: str
+    source: str = "static"
+    config: dict | None = None

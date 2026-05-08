@@ -250,6 +250,111 @@ class ChatMessage(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # token usage / stop_reason / model
 
 
+class Hermes(Base):
+    """agent 运行环境资源 (老板 5-9 拍 · akong-hermes 仓抽象)。
+
+    Hermes = soul + playbook + style + skills + tools · agent 跑起来需要的一切。
+    1:1 关联 agents 表 (一个 agent 一个 hermes)。
+
+    static_ref:
+      - null   = 纯动态 (meta.create_agent 创的)
+      - 'meta-hermes' / 等 = 静态 (从 yaml 同步而来 · meta-hermes 仓 lifespan 写)
+    """
+
+    __tablename__ = "hermes"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # hm_xxx | 'meta-hermes'
+    agent_id: Mapped[str | None] = mapped_column(
+        ForeignKey("agents.id"), nullable=True, index=True
+    )
+    name: Mapped[str] = mapped_column(String(128))
+    soul: Mapped[str] = mapped_column(Text, default="")
+    playbook: Mapped[str] = mapped_column(Text, default="")
+    style: Mapped[str] = mapped_column(Text, default="")
+    static_ref: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    owner_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    extra_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AkongSkill(Base):
+    """skills 表 (新 · 跟 cast-skills 包同名但表前缀 akong_)。
+
+    source='static': static_ref 必填 (e.g. 'cast-skills::publish-post') · code_python null
+    source='dynamic': code_python 必填 (LLM 生成) · static_ref null
+    """
+
+    __tablename__ = "akong_skills"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)  # sk_xxx
+    name: Mapped[str] = mapped_column(String(128))
+    sop_markdown: Mapped[str] = mapped_column(Text, default="")
+    source: Mapped[str] = mapped_column(String(16), default="static", index=True)
+    static_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    code_python: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AkongTool(Base):
+    """akong_tools 表 (新 · 跟老 tools 表 platform registry 平行 · 不冲突)。
+
+    kind: 'builtin' | 'webhook' | 'http_api' | 'dynamic_python'
+    """
+
+    __tablename__ = "akong_tools"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)  # tl_xxx
+    name: Mapped[str] = mapped_column(String(128))
+    kind: Mapped[str] = mapped_column(String(32), default="builtin")
+    spec_json: Mapped[str] = mapped_column(Text, default="{}")
+    static_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    code_python: Mapped[str | None] = mapped_column(Text, nullable=True)
+    webhook_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="static", index=True)
+    owner_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AgentSkill(Base):
+    """agent ↔ akong_skill 关联表 (多对多 + agent 维度 config 覆盖)"""
+
+    __tablename__ = "agent_skills"
+    __table_args__ = (
+        Index("ix_agent_skills_agent_skill", "agent_id", "skill_id"),
+    )
+
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), primary_key=True)
+    skill_id: Mapped[str] = mapped_column(ForeignKey("akong_skills.id"), primary_key=True)
+    source: Mapped[str] = mapped_column(String(16), default="static")
+    config_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AgentAkongTool(Base):
+    """agent ↔ akong_tool 关联表 (跟老 agent_tools 平行 · agent_tools.tool_id 是 platform tools.id)"""
+
+    __tablename__ = "agent_akong_tools"
+    __table_args__ = (
+        Index("ix_agent_akong_tools_agent_tool", "agent_id", "tool_id"),
+    )
+
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), primary_key=True)
+    tool_id: Mapped[str] = mapped_column(ForeignKey("akong_tools.id"), primary_key=True)
+    source: Mapped[str] = mapped_column(String(16), default="static")
+    config_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class AgentChangeLog(Base):
     """agent 自演化 append-only log (D-5 决策 · architecture.md §4)
 
