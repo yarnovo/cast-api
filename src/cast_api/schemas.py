@@ -73,6 +73,9 @@ class AgentCreate(BaseModel):
     style: str = ""
     expertise: str = ""
     avatar: str = ""
+    role: str = "normal"  # 'meta' | 'normal' (architecture §2.9)
+    rules_json: str | None = None
+    metadata_json: str | None = None
 
 
 class AgentUpdate(BaseModel):
