@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="xhs-clone-api",
+    title="cast-api",
     version="0.0.1",
     description="小红书复刻后端 · /api/notes · /api/users",
     lifespan=lifespan,
@@ -47,4 +47,4 @@ def health() -> dict:
 
 @app.get("/", tags=["meta"])
 def root() -> dict:
-    return {"name": "xhs-clone-api", "docs": "/docs", "health": "/health"}
+    return {"name": "cast-api", "docs": "/docs", "health": "/health"}

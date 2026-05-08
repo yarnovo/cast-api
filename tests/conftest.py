@@ -3,9 +3,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from xhs_clone_api.db import Base, get_db
-from xhs_clone_api.main import app
-from xhs_clone_api.seed import seed_all
+from cast_api.db import Base, get_db
+from cast_api.main import app
+from cast_api.seed import seed_all
 
 
 @pytest.fixture()

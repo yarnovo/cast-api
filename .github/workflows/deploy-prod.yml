@@ -1,5 +1,5 @@
 name: deploy-prod
-# xhs-clone-api · prod FC v3 Custom Container · ACR (push main → api.xhs.agentaily.com)
+# cast-api · prod FC v3 Custom Container · ACR (push main → api.xhs.agentaily.com)
 #
 # 流程: docker build → push ACR → fc PUT custom-container
 # 凭证: ACR_USERNAME / ACR_PASSWORD / ALIYUN_AK / ALIYUN_SK
@@ -21,8 +21,8 @@ env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   REGISTRY_VPC: registry-vpc.cn-hangzhou.aliyuncs.com
   NAMESPACE: agentaily
-  IMAGE_NAME: xhs-clone-api
-  FC_FUNCTION: xhs-clone-api
+  IMAGE_NAME: cast-api
+  FC_FUNCTION: cast-api
 
 jobs:
   deploy:

@@ -1,4 +1,4 @@
-# xhs-clone-api
+# cast-api
 
 xhs-clone 后端 API · FastAPI + SQLAlchemy + sqlite (dev) / postgres (prod) · uv 管包。
 
@@ -6,7 +6,7 @@ xhs-clone 后端 API · FastAPI + SQLAlchemy + sqlite (dev) / postgres (prod) ·
 
 ```bash
 uv sync
-uv run uvicorn xhs_clone_api.main:app --reload --port 8000
+uv run uvicorn cast_api.main:app --reload --port 8000
 # 浏览器开 http://localhost:8000/docs
 ```
 
@@ -36,8 +36,8 @@ uv run pytest -v
 
 ## 部署
 
-- staging: `develop` 分支推送 → FC v3 `xhs-clone-api-staging` → `https://staging.api.xhs.agentaily.com`
-- prod: `main` 分支推送 → FC v3 `xhs-clone-api` → `https://api.xhs.agentaily.com`
+- staging: `develop` 分支推送 → FC v3 `cast-api-staging` → `https://staging.api.xhs.agentaily.com`
+- prod: `main` 分支推送 → FC v3 `cast-api` → `https://api.xhs.agentaily.com`
 
 (workflow 待加 · 见 `.github/workflows/`)
 

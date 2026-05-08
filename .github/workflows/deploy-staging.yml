@@ -1,5 +1,5 @@
 name: deploy-staging
-# xhs-clone-api · staging FC v3 Custom Container · ACR (push develop → staging.api.xhs.agentaily.com)
+# cast-api · staging FC v3 Custom Container · ACR (push develop → staging.api.xhs.agentaily.com)
 
 on:
   push:
@@ -18,8 +18,8 @@ env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   REGISTRY_VPC: registry-vpc.cn-hangzhou.aliyuncs.com
   NAMESPACE: agentaily
-  IMAGE_NAME: xhs-clone-api
-  FC_FUNCTION: xhs-clone-api-staging
+  IMAGE_NAME: cast-api
+  FC_FUNCTION: cast-api-staging
 
 jobs:
   deploy:
