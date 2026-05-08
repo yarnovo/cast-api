@@ -10,6 +10,13 @@ class UserPublic(BaseModel):
     name: str
     avatar: str
     bio: str = ""
+    location: str | None = None
+
+
+class UserStats(BaseModel):
+    posts_count: int
+    followers_count: int
+    following_count: int
 
 
 # === 私信 ===
@@ -147,3 +154,26 @@ class OrderPublic(BaseModel):
 
 class OrderDeliver(BaseModel):
     deliverables: str
+
+
+# === 帖子 / 关注 / 点赞 ===
+
+class PostCreate(BaseModel):
+    content: str
+    images: list[str] | None = None
+    location: str | None = None
+
+
+class PostPublic(BaseModel):
+    """帖子对外结构 · author 嵌套 · viewer 视角的 is_liked / is_following_author 由路由层填"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    author: UserPublic
+    content: str
+    images: list[str] = []
+    location: str | None = None
+    likes: int
+    created_at: datetime
+    is_liked: bool = False
+    is_following_author: bool = False
