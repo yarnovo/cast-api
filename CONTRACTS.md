@@ -16,6 +16,10 @@
 | akong-agent-harness | `GET /api/agents/{id}/tools` `GET /api/tools` | tools registry · runtime 注入 LLM function-calling |
 | cast-agents (builtin sync) | `POST /api/agents?id_override=ag_builtin_<slug>` | 确定性 id 同步内置 agent |
 | cast-web (前端) | `GET /api/agents` `GET /api/agents/{id}` `POST /api/orders` | 市场页 / 角色卡 / 下单 |
+| cast-agents (新 hermes path) | `POST/GET/PUT/DELETE /api/hermes` | DynamicHermesLoader 拉/写 hermes RDS row (老板 5-9 拍) |
+| cast-agents (新 hermes path) | `GET /api/skills/{id}` `POST /api/skills` | dynamic SkillResolver 解 dynamic skill |
+| cast-agents (新 hermes path) | `GET /api/akong-tools/{id}` `POST /api/akong-tools` | dynamic ToolResolver 解 dynamic tool (kind: builtin/webhook/http_api/dynamic_python) |
+| meta-hermes (启动 sync) | `POST /api/hermes` (id='meta-hermes', static_ref='meta-hermes') | meta-hermes lifespan 把 yaml 同步到 RDS hermes 表 |
 
 ## 改动影响
 
