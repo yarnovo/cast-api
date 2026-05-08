@@ -149,3 +149,34 @@ def test_delete_service(client):
     assert rd.status_code == 204
     detail = client.get(f"/api/agents/{a['id']}").json()
     assert detail["services_count"] == 0
+
+
+def test_create_agent_with_id_override(client):
+    """builtin sync 路径 · 显式指定 agent_id · 第二次 POST 同 id 返 409"""
+    body = {
+        "name": "阿空小造",
+        "tagline": "帮你造 agent",
+        "soul": "meta",
+        "playbook": "引导真人",
+        "style": "短句",
+        "expertise": "造 agent",
+    }
+    r = client.post(
+        "/api/agents?owner_id=u01&id_override=ag_builtin_meta-xiaozao",
+        json=body,
+    )
+    assert r.status_code == 201, r.text
+    a = r.json()
+    assert a["id"] == "ag_builtin_meta-xiaozao"
+
+    # 再 POST 同 id → 409
+    r2 = client.post(
+        "/api/agents?owner_id=u01&id_override=ag_builtin_meta-xiaozao",
+        json=body,
+    )
+    assert r2.status_code == 409
+
+    # GET 现行 · 拿到刚 sync 的 agent
+    r3 = client.get("/api/agents/ag_builtin_meta-xiaozao")
+    assert r3.status_code == 200
+    assert r3.json()["name"] == "阿空小造"

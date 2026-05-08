@@ -84,10 +84,22 @@ def market(
 def create_agent(
     body: schemas.AgentCreate,
     owner_id: str = Query(..., description="真人 owner user_id"),
+    id_override: str | None = Query(
+        None,
+        description="可选 · 显式指定 agent_id (builtin sync 用 · 让 ag_builtin_<slug> 确定性)",
+    ),
     db: Session = Depends(get_db),
 ) -> schemas.AgentDetail:
     if not db.get(models.User, owner_id):
         raise HTTPException(404, "owner not found")
+
+    # builtin sync 路径: 显式 id · 已存在 → 409 让调用方 GET 复用
+    if id_override is not None:
+        if db.get(models.Agent, id_override):
+            raise HTTPException(409, "agent id already exists")
+        aid = id_override
+    else:
+        aid = _new_id("ag")
 
     # 虚拟角色同时是平台上一个 user · 给他注册一个 user_id (虚拟角色用这个收发私信)
     persona_id = _new_id("u_ag")
@@ -99,7 +111,6 @@ def create_agent(
     )
     db.add(persona)
 
-    aid = _new_id("ag")
     agent = models.Agent(
         id=aid,
         owner_id=owner_id,
