@@ -107,6 +107,9 @@ class AgentDetail(AgentSummary):
     owner_id: str
     services: list["ServicePublic"]
     created_at: datetime
+    role: str = "normal"
+    rules_json: str | None = None
+    metadata_json: str | None = None  # 来自 model.extra (列名 metadata_json)
 
 
 class ServiceCreate(BaseModel):
@@ -177,3 +180,54 @@ class PostPublic(BaseModel):
     created_at: datetime
     is_liked: bool = False
     is_following_author: bool = False
+
+
+# === agent harness · 长记忆 / 自演化 / tools registry ===
+
+
+class AgentMemoryCreate(BaseModel):
+    kind: str  # event | learning | relationship | preference | ...
+    content: str
+    embedding: bytes | None = None
+
+
+class AgentMemoryPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    agent_id: str
+    kind: str
+    content: str
+    created_at: datetime
+
+
+class UpdateSelfBody(BaseModel):
+    field: str  # soul | playbook | style | rules_json | metadata_json
+    new_value: str | None = None
+    reason: str | None = None
+    changed_by: str = "self"  # self | meta | owner | system
+
+
+class ChangeLogPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    agent_id: str
+    field: str
+    old_value: str | None
+    new_value: str | None
+    changed_by: str
+    reason: str | None
+    created_at: datetime
+
+
+class ToolPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    description: str
+    params_schema_json: str
+    returns_schema_json: str
+    platform: str
+    scope: str

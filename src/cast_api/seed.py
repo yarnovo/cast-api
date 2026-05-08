@@ -50,10 +50,12 @@ DEMO_USERS = [
 
 
 def seed_all(db: Session) -> None:
-    """幂等填充 · 演示真人用户 + 3 个示范虚拟角色 + 服务包 + demo posts"""
+    """幂等填充 · 演示真人用户 + 3 个示范虚拟角色 + 服务包 + demo posts + tools registry"""
     seed_demo_users(db)
     seed_demo_agents(db)
     seed_demo_posts(db)
+    seed_tools_registry(db)
+    seed_default_agent_tools(db)
 
 
 def seed_demo_users(db: Session) -> None:
@@ -203,4 +205,128 @@ def seed_demo_posts(db: Session) -> None:
             location=loc,
             likes=0,
         ))
+    db.commit()
+
+
+# === tools registry seed (architecture.md §2.4) ===
+
+
+# 5 个示范 tools · cast 平台特定
+DEMO_TOOLS = [
+    {
+        "id": "cast.post",
+        "name": "post",
+        "description": "在 cast feed 发一条帖子 · 支持文字 / 图片 / 城市定位",
+        "params_schema_json": json.dumps({
+            "type": "object",
+            "properties": {
+                "content": {"type": "string", "description": "帖子正文 markdown"},
+                "images": {"type": "array", "items": {"type": "string"}, "description": "图片 url 列表 · 可选"},
+                "location": {"type": "string", "description": "城市名 · 可选"},
+            },
+            "required": ["content"],
+        }, ensure_ascii=False),
+        "returns_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"post_id": {"type": "string"}},
+        }, ensure_ascii=False),
+        "platform": "cast",
+        "scope": "normal",
+    },
+    {
+        "id": "cast.send_dm",
+        "name": "send_dm",
+        "description": "给指定用户发私信 · 一对一",
+        "params_schema_json": json.dumps({
+            "type": "object",
+            "properties": {
+                "to_user_id": {"type": "string"},
+                "content": {"type": "string"},
+            },
+            "required": ["to_user_id", "content"],
+        }, ensure_ascii=False),
+        "returns_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"message_id": {"type": "integer"}},
+        }, ensure_ascii=False),
+        "platform": "cast",
+        "scope": "normal",
+    },
+    {
+        "id": "cast.like_post",
+        "name": "like_post",
+        "description": "点赞一条帖子 · 已赞则取消",
+        "params_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"post_id": {"type": "string"}},
+            "required": ["post_id"],
+        }, ensure_ascii=False),
+        "returns_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"liked": {"type": "boolean"}},
+        }, ensure_ascii=False),
+        "platform": "cast",
+        "scope": "normal",
+    },
+    {
+        "id": "cast.follow_user",
+        "name": "follow_user",
+        "description": "关注一个用户 · 已关注则取消",
+        "params_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"user_id": {"type": "string"}},
+            "required": ["user_id"],
+        }, ensure_ascii=False),
+        "returns_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"following": {"type": "boolean"}},
+        }, ensure_ascii=False),
+        "platform": "cast",
+        "scope": "normal",
+    },
+    {
+        "id": "cast.create_agent",
+        "name": "create_agent",
+        "description": "创建一个新 agent · meta agent 专用 · 普通 agent 无权调",
+        "params_schema_json": json.dumps({
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "soul": {"type": "string"},
+                "playbook": {"type": "string"},
+            },
+            "required": ["name"],
+        }, ensure_ascii=False),
+        "returns_schema_json": json.dumps({
+            "type": "object",
+            "properties": {"agent_id": {"type": "string"}},
+        }, ensure_ascii=False),
+        "platform": "cast",
+        "scope": "meta-only",
+    },
+]
+
+
+def seed_tools_registry(db: Session) -> None:
+    """注册 5 个示范 tools · 幂等 (按 id upsert · 已存在跳过)"""
+    for spec in DEMO_TOOLS:
+        if db.get(models.Tool, spec["id"]):
+            continue
+        db.add(models.Tool(**spec))
+    db.commit()
+
+
+def seed_default_agent_tools(db: Session) -> None:
+    """给 3 个 demo agent grant 前 4 个 normal tool · 不 grant create_agent (它们不是 meta)"""
+    demo_agent_ids = ["ag_demo_design", "ag_demo_coach", "ag_demo_dev"]
+    grant_tool_ids = ["cast.post", "cast.send_dm", "cast.like_post", "cast.follow_user"]
+    for aid in demo_agent_ids:
+        if not db.get(models.Agent, aid):
+            continue
+        for tid in grant_tool_ids:
+            if not db.get(models.Tool, tid):
+                continue
+            if db.get(models.AgentTool, (aid, tid)):
+                continue
+            db.add(models.AgentTool(agent_id=aid, tool_id=tid))
     db.commit()
