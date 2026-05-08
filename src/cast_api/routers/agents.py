@@ -41,7 +41,19 @@ def _detail(agent: models.Agent) -> schemas.AgentDetail:
         owner_id=agent.owner_id,
         services=[schemas.ServicePublic.model_validate(s) for s in agent.services if s.enabled],
         created_at=agent.created_at,
+        role=agent.role,
+        rules_json=agent.rules_json,
+        metadata_json=agent.extra,
     )
+
+
+# 自演化允许改的字段 (architecture.md §4 D-5)
+_UPDATABLE_FIELDS = {"soul", "playbook", "style", "rules_json", "metadata_json"}
+
+
+def _resolve_field_attr(field: str) -> str:
+    """schema 字段名 → ORM 属性名 (metadata_json 列对应 model.extra)"""
+    return "extra" if field == "metadata_json" else field
 
 
 @router.get("", response_model=list[schemas.AgentSummary])
@@ -221,3 +233,118 @@ def remove_service(
         raise HTTPException(403, "not your agent")
     db.delete(svc)
     db.commit()
+
+
+# === agent harness · 长记忆 (architecture.md §2.3) ===
+
+
+@router.post("/{agent_id}/memories", response_model=schemas.AgentMemoryPublic, status_code=201)
+def create_memory(
+    agent_id: str,
+    body: schemas.AgentMemoryCreate,
+    db: Session = Depends(get_db),
+) -> schemas.AgentMemoryPublic:
+    if not db.get(models.Agent, agent_id):
+        raise HTTPException(404, "agent not found")
+    mem = models.AgentMemory(
+        id=_new_id("mem"),
+        agent_id=agent_id,
+        kind=body.kind,
+        content=body.content,
+        embedding=body.embedding,
+    )
+    db.add(mem)
+    db.commit()
+    db.refresh(mem)
+    return schemas.AgentMemoryPublic.model_validate(mem)
+
+
+@router.get("/{agent_id}/memories", response_model=list[schemas.AgentMemoryPublic])
+def list_memories(
+    agent_id: str,
+    kind: str | None = Query(None, description="过滤 kind · 不传返全部"),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> list[schemas.AgentMemoryPublic]:
+    if not db.get(models.Agent, agent_id):
+        raise HTTPException(404, "agent not found")
+    stmt = (
+        select(models.AgentMemory)
+        .where(models.AgentMemory.agent_id == agent_id)
+    )
+    if kind:
+        stmt = stmt.where(models.AgentMemory.kind == kind)
+    stmt = stmt.order_by(models.AgentMemory.created_at.desc()).limit(limit)
+    rows = db.execute(stmt).scalars().all()
+    return [schemas.AgentMemoryPublic.model_validate(m) for m in rows]
+
+
+@router.delete("/{agent_id}/memories/{memory_id}", status_code=204)
+def delete_memory(
+    agent_id: str,
+    memory_id: str,
+    db: Session = Depends(get_db),
+) -> None:
+    mem = db.get(models.AgentMemory, memory_id)
+    if not mem or mem.agent_id != agent_id:
+        raise HTTPException(404, "memory not found")
+    db.delete(mem)
+    db.commit()
+
+
+# === agent harness · 自演化 (D-5 · append-only log + 时点视图) ===
+
+
+@router.post("/{agent_id}/update-self", response_model=schemas.AgentDetail)
+def update_self(
+    agent_id: str,
+    body: schemas.UpdateSelfBody,
+    db: Session = Depends(get_db),
+) -> schemas.AgentDetail:
+    """同事务: insert change_log + update agents.<field>"""
+    if body.field not in _UPDATABLE_FIELDS:
+        raise HTTPException(
+            400,
+            f"field must be one of {sorted(_UPDATABLE_FIELDS)}",
+        )
+    agent = db.execute(
+        select(models.Agent)
+        .options(selectinload(models.Agent.persona), selectinload(models.Agent.services))
+        .where(models.Agent.id == agent_id)
+    ).scalar_one_or_none()
+    if not agent:
+        raise HTTPException(404, "agent not found")
+
+    attr = _resolve_field_attr(body.field)
+    old_value = getattr(agent, attr)
+    log = models.AgentChangeLog(
+        id=_new_id("chg"),
+        agent_id=agent_id,
+        field=body.field,
+        old_value=old_value,
+        new_value=body.new_value,
+        changed_by=body.changed_by,
+        reason=body.reason,
+    )
+    setattr(agent, attr, body.new_value)
+    db.add(log)
+    db.commit()
+    db.refresh(agent, attribute_names=["persona", "services"])
+    return _detail(agent)
+
+
+@router.get("/{agent_id}/changes", response_model=list[schemas.ChangeLogPublic])
+def list_changes(
+    agent_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> list[schemas.ChangeLogPublic]:
+    if not db.get(models.Agent, agent_id):
+        raise HTTPException(404, "agent not found")
+    rows = db.execute(
+        select(models.AgentChangeLog)
+        .where(models.AgentChangeLog.agent_id == agent_id)
+        .order_by(models.AgentChangeLog.created_at.desc())
+        .limit(limit)
+    ).scalars().all()
+    return [schemas.ChangeLogPublic.model_validate(r) for r in rows]
