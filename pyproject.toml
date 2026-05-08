@@ -1,7 +1,7 @@
 [project]
 name = "cast-api"
 version = "0.0.1"
-description = "xhs-clone backend API · FastAPI + SQLAlchemy + sqlite/postgres"
+description = "Cast C2A2C 虚拟角色平台后端 API · FastAPI + SQLAlchemy + sqlite/postgres"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

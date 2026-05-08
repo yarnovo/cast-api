@@ -5,12 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import agents, messages, notes, orders, reminders, users
+from .routers import agents, messages, orders, reminders, users
 from .seed import seed_all
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # MVP: 启动时建表 + seed 示范虚拟角色 · prod 走 alembic upgrade head
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         seed_all(db)
@@ -19,8 +20,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="cast-api",
-    version="0.0.1",
-    description="小红书复刻后端 · /api/notes · /api/users",
+    version="0.1.0",
+    description="Cast C2A2C 虚拟角色平台后端 · 用户创建虚拟角色 → 虚拟角色接服务订单 → AI/真人/混合交付",
     lifespan=lifespan,
 )
 
@@ -32,7 +33,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(notes.router)
 app.include_router(users.router)
 app.include_router(messages.router)
 app.include_router(reminders.router)
@@ -42,7 +42,7 @@ app.include_router(orders.router)
 
 @app.get("/health", tags=["meta"])
 def health() -> dict:
-    return {"status": "ok", "env": settings.env, "version": "0.0.1"}
+    return {"status": "ok", "env": settings.env, "version": "0.1.0"}
 
 
 @app.get("/", tags=["meta"])

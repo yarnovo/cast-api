@@ -1,10 +1,9 @@
-"""C2A2C 数字角色管理 · 真人 owner 创建 / 编辑自己的 agent · 访客浏览市场"""
+"""C2A2C 虚拟角色管理 · 真人 owner 创建 / 编辑自己的虚拟角色 · 访客浏览市场"""
 
-from datetime import datetime, UTC
 from secrets import token_urlsafe
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
@@ -51,7 +50,7 @@ def market(
     limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
 ) -> list[schemas.AgentSummary]:
-    """数字角色市场首页"""
+    """虚拟角色市场首页"""
     stmt = (
         select(models.Agent)
         .options(selectinload(models.Agent.persona), selectinload(models.Agent.services))
@@ -78,7 +77,7 @@ def create_agent(
     if not db.get(models.User, owner_id):
         raise HTTPException(404, "owner not found")
 
-    # agent 同时是 xhs 平台上一个 user · 给他注册一个 user_id (agent 用这个发笔记 / 评论 / 私信)
+    # 虚拟角色同时是平台上一个 user · 给他注册一个 user_id (虚拟角色用这个收发私信)
     persona_id = _new_id("u_ag")
     persona = models.User(
         id=persona_id,
@@ -92,7 +91,7 @@ def create_agent(
     agent = models.Agent(
         id=aid,
         owner_id=owner_id,
-        xhs_user_id=persona_id,
+        persona_user_id=persona_id,
         name=body.name,
         tagline=body.tagline,
         soul=body.soul,

@@ -8,7 +8,7 @@ node_modules
 .DS_Store
 *.sqlite
 *.sqlite-*
-xhs.db
+cast.db
 .env
 .env.*
 !.env.example

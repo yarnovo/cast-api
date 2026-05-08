@@ -4,8 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "sqlite:///./xhs.db"
-    cors_origins: str = "http://localhost:5173,https://xhs.agentaily.com"
+    database_url: str = "sqlite:///./cast.db"
+    cors_origins: str = "http://localhost:5173,https://cast.agentaily.com,https://staging.cast.agentaily.com"
     env: str = "dev"
 
     @property

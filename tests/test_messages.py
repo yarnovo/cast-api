@@ -57,12 +57,12 @@ def test_unread_count(client):
 
 def test_create_reminder(client):
     fire = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
-    r = client.post("/api/reminders?user_id=u01", json={"fire_at": fire, "what": "早安笔记", "why": "聊咖啡"})
+    r = client.post("/api/reminders?user_id=u01", json={"fire_at": fire, "what": "联系 buyer", "why": "工单 X 进度同步"})
     assert r.status_code == 201
-    assert r.json()["what"] == "早安笔记"
+    assert r.json()["what"] == "联系 buyer"
 
     r2 = client.get("/api/reminders?user_id=u01")
-    assert any(rm["what"] == "早安笔记" for rm in r2.json())
+    assert any(rm["what"] == "联系 buyer" for rm in r2.json())
 
 
 def test_due_reminders(client):

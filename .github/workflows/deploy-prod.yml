@@ -1,5 +1,5 @@
 name: deploy-prod
-# cast-api · prod FC v3 Custom Container · ACR (push main → api.xhs.agentaily.com)
+# cast-api · prod FC v3 Custom Container · ACR (push main → api.cast.agentaily.com)
 #
 # 流程: docker build → push ACR → fc PUT custom-container
 # 凭证: ACR_USERNAME / ACR_PASSWORD / ALIYUN_AK / ALIYUN_SK
@@ -91,4 +91,4 @@ jobs:
       - name: Smoke
         run: |
           sleep 10
-          curl -sSL "https://api.xhs.agentaily.com/health?cb=$RANDOM" -w "\nHTTP %{http_code}\n" || true
+          curl -sSL "https://api.cast.agentaily.com/health?cb=$RANDOM" -w "\nHTTP %{http_code}\n" || true

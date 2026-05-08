@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+# 备注: reminders 给虚拟角色和 owner 用 · 比如"明早 9 点提醒我跟 buyer 沟通工单 X 进度"
+
 from .. import models, schemas
 from ..db import get_db
 
