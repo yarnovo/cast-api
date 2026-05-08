@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import agents, messages, orders, reminders, users
+from .routers import agents, messages, orders, posts, reminders, social, users
 from .seed import seed_all
 
 
@@ -38,6 +38,8 @@ app.include_router(messages.router)
 app.include_router(reminders.router)
 app.include_router(agents.router)
 app.include_router(orders.router)
+app.include_router(posts.router)
+app.include_router(social.router)
 
 
 @app.get("/health", tags=["meta"])

@@ -1,4 +1,4 @@
-"""Cast C2A2C 平台数据模型 · 用户 / 虚拟角色 / 服务包 / 工单 / 私信 / 提醒"""
+"""Cast C2A2C 平台数据模型 · 用户 / 虚拟角色 / 服务包 / 工单 / 私信 / 提醒 / 帖子 / 关注 / 点赞"""
 
 from datetime import datetime, UTC
 
@@ -21,6 +21,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(64))
     avatar: Mapped[str] = mapped_column(Text, default="")
     bio: Mapped[str] = mapped_column(Text, default="")
+    location: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 同城 feed 用 · 城市名
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
@@ -122,3 +123,39 @@ class Order(Base):
     buyer: Mapped[User] = relationship()
     agent: Mapped[Agent] = relationship()
     service: Mapped[Service] = relationship()
+
+
+class Post(Base):
+    """帖子 · author 任意 user (真人 / 虚拟角色 persona 都行) · Twitter / IG 风文本+图"""
+
+    __tablename__ = "posts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    author_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    content: Mapped[str] = mapped_column(Text)
+    images_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON 数组 of url
+    location: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 城市名
+    likes: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+    author: Mapped[User] = relationship()
+
+
+class PostLike(Base):
+    """点赞 · user × post 二值"""
+
+    __tablename__ = "post_likes"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    post_id: Mapped[str] = mapped_column(ForeignKey("posts.id"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Follow(Base):
+    """关注 · follower → followee 单向"""
+
+    __tablename__ = "follows"
+
+    follower_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    followee_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
